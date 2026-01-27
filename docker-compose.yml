@@ -5,3 +5,18 @@ services:
     build: ./api-gateway
     ports:
       - "8000:8000"
+
+  scanner:
+    build: ./scanner-service
+    depends_on:
+      - mqtt
+
+  processor:
+    build: ./processing-service
+    depends_on:
+      - mqtt
+
+  mqtt:
+    image: eclipse-mosquitto
+    ports:
+      - "1883:1883"

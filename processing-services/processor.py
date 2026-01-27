@@ -1,11 +1,13 @@
 import os
+import json
 import cv2
+import paho.mqtt.client as mqtt
 from opencv_utils import load_image, preprocess, extract_edges
 
+MQTT_BROKER = "mqtt"
+TOPIC = "scanner/images_ready"
 
-INPUT_DIR = "./input"
 OUTPUT_DIR = "./output"
-
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 
@@ -20,15 +22,21 @@ def process_image(image_path: str):
     cv2.imwrite(output_path, edges)
     print(f"[PROCESSOR] Processed {filename}")
 
-    return output_path
+
+def on_message(client, userdata, msg):
+    data = json.loads(msg.payload.decode())
+    images = data["images"]
+
+    print("[PROCESSOR] Received images via MQTT")
+
+    for image_path in images:
+        process_image(image_path)
 
 
-def process_all():
-    for file in os.listdir(INPUT_DIR):
-        if file.endswith(".png"):
-            process_image(os.path.join(INPUT_DIR, file))
+client = mqtt.Client()
+client.connect(MQTT_BROKER, 1883)
+client.subscribe(TOPIC)
+client.on_message = on_message
 
-
-if __name__ == "__main__":
-    print("[PROCESSOR] Starting image processing service...")
-    process_all()
+print("[PROCESSOR] Waiting for MQTT messages...")
+client.loop_forever()
